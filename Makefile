@@ -1,10 +1,10 @@
 cleos = docker exec -it eosio /opt/eosio/bin/cleos --url http://127.0.0.1:7777 --wallet-url http://127.0.0.1:5555
 CONTRACT_FOLDER ?= $(CURDIR)/contracts
-DEV_PUBLIC_KEY ?= EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 DEV_PRIVATE_KEY ?= 5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
+DEV_PUBLIC_KEY ?= EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 
-WALLET_PUBLIC_KEY ?= PW5KXzQjgCAP11AFSm6zFniPmCopsQQ4UT6DMkW2BJ8BnuwjUkGoV
-WALLET_PRIVATE_KEY ?= EOS71hzYxPC9fPsrVACnimnsxnfX8hCoW1Jj8X7ynmnrt3ufn7hQP
+WALLET_PRIVATE_KEY ?= PW5JQnjzwsYawzZWvvJmYLhFyA9bBYDX8kQi3vPk5HidWEzezNRgN
+WALLET_PUBLIC_KEY ?= EOS6jM6de9FnjPvZoXEPMHVx9sx7EhecpSWgwxr8yKsKpyqH39m8y
 
 clean:
 	docker rm -f eosio
@@ -16,7 +16,7 @@ eos:
 		--publish 127.0.0.1:5555:5555 \
 		--volume $(CONTRACT_FOLDER):$(CONTRACT_FOLDER) \
 		--detach \
-		eosio/eos:v1.4.4 \
+		eosio/eos:v1.4.1 \
 		/bin/bash -c \
 		"keosd --http-server-address=0.0.0.0:5555 & \
 		exec nodeos -e -p eosio \
@@ -38,29 +38,29 @@ list:
 
 create:
 	@$(cleos) wallet create --to-console
-	# set WALLET_PUBLIC_KEY
+	# set WALLET_PRIVATE_KEY
 	@$(cleos) wallet open
 
 unlock:	
-	@$(cleos) wallet unlock --password $(WALLET_PUBLIC_KEY)
+	@$(cleos) wallet unlock --password $(WALLET_PRIVATE_KEY)
 	@$(cleos) wallet create_key
-	# set WALLET_PRIVATE_KEY
+	# set WALLET_PUBLIC_KEY
 	@$(cleos) wallet import --private-key $(DEV_PRIVATE_KEY)
 
 account:
-	$(cleos) create account eosio bob $(WALLET_PRIVATE_KEY)
-	$(cleos) create account eosio alice $(WALLET_PRIVATE_KEY)
-	$(cleos) create account eosio hello $(WALLET_PRIVATE_KEY) -p eosio@active
-	$(cleos) create account eosio addressbook $(WALLET_PRIVATE_KEY) -p eosio@active
-	$(cleos) create account eosio abcounter $(WALLET_PRIVATE_KEY) -p eosio@active
+	$(cleos) create account eosio bob $(WALLET_PUBLIC_KEY)
+	$(cleos) create account eosio alice $(WALLET_PUBLIC_KEY)
+	$(cleos) create account eosio hello $(WALLET_PUBLIC_KEY) -p eosio@active
+	$(cleos) create account eosio addressbook $(WALLET_PUBLIC_KEY) -p eosio@active
+	$(cleos) create account eosio abcounter $(WALLET_PUBLIC_KEY) -p eosio@active
 
 permission:
 	@$(cleos) set account permission bob active \
-		'{"threshold": 1,"keys": [{"key": "$(WALLET_PRIVATE_KEY)", "weight": 1}], "accounts": [{"permission":{"actor":"addressbook","permission":"eosio.code"},"weight":1}]}' \
+		'{"threshold": 1,"keys": [{"key": "$(WALLET_PUBLIC_KEY)", "weight": 1}], "accounts": [{"permission":{"actor":"addressbook","permission":"eosio.code"},"weight":1}]}' \
 		owner -p bob@owner
 	
 	@$(cleos) set account permission alice active \
-		'{"threshold": 1,"keys": [{"key": "$(WALLET_PRIVATE_KEY)", "weight": 1}], "accounts": [{"permission":{"actor":"addressbook","permission":"eosio.code"},"weight":1}]}' \
+		'{"threshold": 1,"keys": [{"key": "$(WALLET_PUBLIC_KEY)", "weight": 1}], "accounts": [{"permission":{"actor":"addressbook","permission":"eosio.code"},"weight":1}]}' \
 		owner -p alice@owner
 
 define build
