@@ -3,8 +3,8 @@ CONTRACT_FOLDER ?= $(CURDIR)/contracts
 DEV_PRIVATE_KEY ?= 5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
 DEV_PUBLIC_KEY ?= EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 
-WALLET_PRIVATE_KEY ?= PW5JQnjzwsYawzZWvvJmYLhFyA9bBYDX8kQi3vPk5HidWEzezNRgN
-WALLET_PUBLIC_KEY ?= EOS6jM6de9FnjPvZoXEPMHVx9sx7EhecpSWgwxr8yKsKpyqH39m8y
+WALLET_PRIVATE_KEY ?= PW5K1g4iUsmtx8zmFTnPYPRdqmJVE1phM67HECRrVDmauR9UZipqo
+WALLET_PUBLIC_KEY ?= EOS7CQQUoG8SSaihBvLk4nfCXiXorHfPmmgT9n5i9yd2L81Ctma9U
 
 clean:
 	docker rm -f eosio
@@ -50,18 +50,11 @@ unlock:
 account:
 	$(cleos) create account eosio bob $(WALLET_PUBLIC_KEY)
 	$(cleos) create account eosio alice $(WALLET_PUBLIC_KEY)
+	$(cleos) create account eosio caller $(WALLET_PUBLIC_KEY)
+	$(cleos) create account eosio receiver $(WALLET_PUBLIC_KEY)
 	$(cleos) create account eosio hello $(WALLET_PUBLIC_KEY) -p eosio@active
 	$(cleos) create account eosio addressbook $(WALLET_PUBLIC_KEY) -p eosio@active
 	$(cleos) create account eosio abcounter $(WALLET_PUBLIC_KEY) -p eosio@active
-
-permission:
-	@$(cleos) set account permission bob active \
-		'{"threshold": 1,"keys": [{"key": "$(WALLET_PUBLIC_KEY)", "weight": 1}], "accounts": [{"permission":{"actor":"addressbook","permission":"eosio.code"},"weight":1}]}' \
-		owner -p bob@owner
-	
-	@$(cleos) set account permission alice active \
-		'{"threshold": 1,"keys": [{"key": "$(WALLET_PUBLIC_KEY)", "weight": 1}], "accounts": [{"permission":{"actor":"addressbook","permission":"eosio.code"},"weight":1}]}' \
-		owner -p alice@owner
 
 define build
 	cd $(CONTRACT_FOLDER)/$(1); \
@@ -74,15 +67,6 @@ hello:
 	$(call build,hello)
 	$(cleos) push action hello hi '["bob"]' -p bob@active
 	$(cleos) push action hello hi '["alice"]' -p alice@active
-
-ab:
-	$(call build,abcounter)
-	# $(cleos) push action abcounter count '["alice", "erase"]' -p alice@active
-	# $(cleos) push action addressbook erase '["alice"]' -p alice@active
-	# $(cleos) push action addressbook upsert '["alice", "alice", "liddell", 19, "123 drink me way", "wonderland", "amsterdam"]' -p alice@active
-
-ab.by.count:
-	$(cleos) get table abcounter abcounter counts --lower alice --limit
 
 addr:
 	$(call build,addressbook)
@@ -103,3 +87,19 @@ addr.by.age:
 
 addr.list:
 	$(cleos) get actions alice
+
+define grant
+	@$(cleos) set account permission $(1) active \
+		'{"threshold": 1,"keys": [{"key": "$(WALLET_PUBLIC_KEY)", "weight": 1}], "accounts": [{"permission":{"actor":"$(2)","permission":"eosio.code"},"weight":1}]}' \
+		owner -p $(1)@owner
+endef
+
+caller:
+	$(call build,caller)
+	$(call build,receiver)
+
+	$(call grant,bob,caller)
+	$(call grant,alice,caller)
+
+call:
+	$(cleos) push action caller hi '["bob", "alice"]' -p bob@active

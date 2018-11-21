@@ -27,7 +27,6 @@ public:
        row.state = state;
 
        send_summary(user, " successfully emplaced record to addressbook");
-       increment_counter(user, "emplace");
       });
     }
     else {
@@ -42,7 +41,6 @@ public:
         row.state = state;
 
         send_summary(user, " successfully modified record to addressbook");
-        increment_counter(user, "modify");
       });
 
     }
@@ -57,7 +55,6 @@ public:
     eosio_assert(iterator != addresses.end(), "Record does not exist");
     addresses.erase(iterator);
     send_summary(user, " successfully erased record from addressbook");
-    increment_counter(user, "erase");
   }
 
   [[eosio::action]]
@@ -83,27 +80,15 @@ private:
 
   void send_summary(name user, std::string message) {
     action(
-      permission_level{get_self(),"active"_n},
+      permission_level{get_self(),name("active")},
       get_self(),
-      "notify"_n,
+      name("notify"),
       std::make_tuple(user, name{user}.to_string() + message)
     ).send();
   };
 
-  void increment_counter(name user, std::string type) {
-    
-    action counter = action(
-      permission_level{get_self(),"active"_n},
-      "abcounter"_n,
-      "count"_n,
-      std::make_tuple(user, type)
-    );
-
-    counter.send();
-  }
-
-  typedef eosio::multi_index<"people"_n, person, 
-    indexed_by<"byage"_n, const_mem_fun<person, uint64_t, &person::get_secondary_1>>
+  typedef eosio::multi_index<name("people"), person, 
+    indexed_by<name("byage"), const_mem_fun<person, uint64_t, &person::get_secondary_1>>
   > address_index;
   
 };
