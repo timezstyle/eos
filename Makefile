@@ -1,9 +1,10 @@
 cleos = docker exec -it eosio /opt/eosio/bin/cleos --url http://127.0.0.1:7777 --wallet-url http://127.0.0.1:5555
 CONTRACT_FOLDER ?= $(CURDIR)/contracts
+DEV_PUBLIC_KEY ?= EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 DEV_PRIVATE_KEY ?= 5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
 
-WALLET_PUBLIC_KEY ?= PW5KaVAuTzxu9CR6gc898h6o6ZtuxgE44jBPDJLF9kWwd7sX6bYN5
-WALLET_PRIVATE_KEY ?= EOS56RaeFbaqqjPMtVHG5rjtf4ksq4Eqh6naeSo7AYkL3J93QATnY
+WALLET_PUBLIC_KEY ?= PW5KXzQjgCAP11AFSm6zFniPmCopsQQ4UT6DMkW2BJ8BnuwjUkGoV
+WALLET_PRIVATE_KEY ?= EOS71hzYxPC9fPsrVACnimnsxnfX8hCoW1Jj8X7ynmnrt3ufn7hQP
 
 clean:
 	docker rm -f eosio
@@ -15,9 +16,22 @@ eos:
 		--publish 127.0.0.1:5555:5555 \
 		--volume $(CONTRACT_FOLDER):$(CONTRACT_FOLDER) \
 		--detach \
-		eosio/eos:v1.4.2 \
+		eosio/eos:v1.4.4 \
 		/bin/bash -c \
-		"keosd --http-server-address=0.0.0.0:5555 & exec nodeos -e -p eosio --plugin eosio::producer_plugin --plugin eosio::chain_api_plugin --plugin eosio::history_plugin --plugin eosio::history_api_plugin --plugin eosio::http_plugin -d /mnt/dev/data --config-dir /mnt/dev/config --http-server-address=0.0.0.0:7777 --access-control-allow-origin=* --contracts-console --http-validate-host=false --filter-on='*'"
+		"keosd --http-server-address=0.0.0.0:5555 & \
+		exec nodeos -e -p eosio \
+			--plugin eosio::producer_plugin \
+			--plugin eosio::chain_api_plugin \
+			--plugin eosio::history_plugin \
+			--plugin eosio::history_api_plugin \
+			--plugin eosio::http_plugin \
+			-d /mnt/dev/data \
+			--config-dir /mnt/dev/config \
+			--http-server-address=0.0.0.0:7777 \
+			--access-control-allow-origin=* \
+			--contracts-console \
+			--http-validate-host=false \
+			--filter-on='*'"
 
 list:
 	@$(cleos) wallet list
@@ -34,24 +48,45 @@ unlock:
 	@$(cleos) wallet import --private-key $(DEV_PRIVATE_KEY)
 
 account:
-	$(cleos) create account eosio bob $(WALLET_PRIVATE_KEY) 
-	$(cleos) create account eosio alice $(WALLET_PRIVATE_KEY) 
+	$(cleos) create account eosio bob $(WALLET_PRIVATE_KEY)
+	$(cleos) create account eosio alice $(WALLET_PRIVATE_KEY)
 	$(cleos) create account eosio hello $(WALLET_PRIVATE_KEY) -p eosio@active
 	$(cleos) create account eosio addressbook $(WALLET_PRIVATE_KEY) -p eosio@active
+	$(cleos) create account eosio abcounter $(WALLET_PRIVATE_KEY) -p eosio@active
+
+permission:
+	@$(cleos) set account permission bob active \
+		'{"threshold": 1,"keys": [{"key": "$(WALLET_PRIVATE_KEY)", "weight": 1}], "accounts": [{"permission":{"actor":"addressbook","permission":"eosio.code"},"weight":1}]}' \
+		owner -p bob@owner
+	
+	@$(cleos) set account permission alice active \
+		'{"threshold": 1,"keys": [{"key": "$(WALLET_PRIVATE_KEY)", "weight": 1}], "accounts": [{"permission":{"actor":"addressbook","permission":"eosio.code"},"weight":1}]}' \
+		owner -p alice@owner
 
 define build
-	cd $(CONTRACT_FOLDER)/$(1); eosio-cpp -o $(1).wasm $(1).cpp --abigen; cd -
-	cd $(CONTRACT_FOLDER)/$(1); $(cleos) set contract $(1) $(CONTRACT_FOLDER)/$(1) -p $(1)@active; cd -
+	cd $(CONTRACT_FOLDER)/$(1); \
+	eosio-cpp -o $(1).wasm $(1).cpp --abigen; \
+	$(cleos) set contract $(1) $(CONTRACT_FOLDER)/$(1); \
+	cd -
 endef
 
 hello:
 	$(call build,hello)
 	$(cleos) push action hello hi '["bob"]' -p bob@active
-	$(cleos) push action hello hi '["alice"]' -p bob@active
+	$(cleos) push action hello hi '["alice"]' -p alice@active
+
+ab:
+	$(call build,abcounter)
+	# $(cleos) push action abcounter count '["alice", "erase"]' -p alice@active
+	# $(cleos) push action addressbook erase '["alice"]' -p alice@active
+	# $(cleos) push action addressbook upsert '["alice", "alice", "liddell", 19, "123 drink me way", "wonderland", "amsterdam"]' -p alice@active
+
+ab.by.count:
+	$(cleos) get table abcounter abcounter counts --lower alice --limit
 
 addr:
 	$(call build,addressbook)
-	$(cleos) push action addressbook upsert '["bob", "bob", "is a guy", 49, "doesnt exist", "somewhere", "someplace"]' -p bob@active
+	$(cleos) push action addressbook upsert '["bob", "bob", "is a guy", 50, "doesnt exist", "somewhere", "someplace"]' -p bob@active
 	$(cleos) push action addressbook upsert '["alice", "alice", "liddell", 9, "123 drink me way", "wonderland", "amsterdam"]' -p alice@active
 
 addr.clean:
