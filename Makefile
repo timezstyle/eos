@@ -2,8 +2,8 @@ cleos = docker exec -it eosio /opt/eosio/bin/cleos --url http://127.0.0.1:7777 -
 CONTRACT_FOLDER ?= $(CURDIR)/contracts
 DEV_PRIVATE_KEY ?= 5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
 
-WALLET_PUBLIC_KEY ?= PW5JFaYzpMQcXPztJpioTFpN2mzJ5x1VD2ZPHgWEnZsC7otHQV79P
-WALLET_PRIVATE_KEY ?= EOS6FzfHToz5bErL3bgQBSD9GmYpA8riiXwjSrgSNss1VhbG2DJXX
+WALLET_PUBLIC_KEY ?= PW5KaVAuTzxu9CR6gc898h6o6ZtuxgE44jBPDJLF9kWwd7sX6bYN5
+WALLET_PRIVATE_KEY ?= EOS56RaeFbaqqjPMtVHG5rjtf4ksq4Eqh6naeSo7AYkL3J93QATnY
 
 clean:
 	docker rm -f eosio
@@ -31,9 +31,7 @@ unlock:
 	@$(cleos) wallet unlock --password $(WALLET_PUBLIC_KEY)
 	@$(cleos) wallet create_key
 	# set WALLET_PRIVATE_KEY
-
-import:
-	$(cleos) wallet import --private-key $(DEV_PRIVATE_KEY)
+	@$(cleos) wallet import --private-key $(DEV_PRIVATE_KEY)
 
 account:
 	$(cleos) create account eosio bob $(WALLET_PRIVATE_KEY) 
@@ -51,12 +49,22 @@ hello:
 	$(cleos) push action hello hi '["bob"]' -p bob@active
 	$(cleos) push action hello hi '["alice"]' -p bob@active
 
-addressbook:
+addr:
 	$(call build,addressbook)
-	$(cleos) push action addressbook upsert '["alice", "alice", "liddell", "123 drink me way", "wonderland", "amsterdam"]' -p alice@active
-	$(cleos) push action addressbook upsert '["bob", "bob", "is a loser", "doesnt exist", "somewhere", "someplace"]' -p bob@active
-	$(cleos) get table addressbook addressbook people --lower alice --limit 1
+	$(cleos) push action addressbook upsert '["bob", "bob", "is a guy", 49, "doesnt exist", "somewhere", "someplace"]' -p bob@active
+	$(cleos) push action addressbook upsert '["alice", "alice", "liddell", 9, "123 drink me way", "wonderland", "amsterdam"]' -p alice@active
+
+addr.clean:
+	$(cleos) push action addressbook erase '["bob"]' -p bob@active
 	$(cleos) push action addressbook erase '["alice"]' -p alice@active
 
-	$(cleos) push action addressbook upsert '["alice", "alice", "liddell", "123 drink me way", "wonderland", "amsterdam"]' -p alice@active
+addr.by.name:
+	$(cleos) get table addressbook addressbook people --lower alice --limit 1
+
+addr.by.age:
+	$(cleos) get table addressbook addressbook people --upper 10 --key-type i64 --index 2
+	$(cleos) get table addressbook addressbook people --upper 50 --key-type i64 --index 2
+	# $(cleos) get table addressbook addressbook people -h
+
+addr.list:
 	$(cleos) get actions alice
