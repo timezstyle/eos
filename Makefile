@@ -4,7 +4,7 @@ DEV_PRIVATE_KEY ?= 5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
 DEV_PUBLIC_KEY ?= EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 
 WALLET_PRIVATE_KEY ?= PW5KaNqnMu6fxMCThhK92fnKq7HuW9RW54FrZpz22YYWadV5GVc9a
-WALLET_PUBLIC_KEY ?= EOS5EugZ6wvypMxca2ehUBvxbkdwyPgKnVfGbJxReeCY7j8Fretqc
+WALLET_PUBLIC_KEY ?= EOS6PZ7uYhNi9gryXHF9yR15C6f8TiNu5QAcnKdCqPvzNVoPDR62Y
 
 clean:
 	docker rm -f eosio
@@ -107,3 +107,28 @@ addr.by.age:
 
 addr.list:
 	$(cleos) get actions alice
+
+
+token.account:
+	$(cleos) create account eosio eosio.token $(DEV_PUBLIC_KEY)
+
+token.build:
+	cd $(CONTRACT_FOLDER)/eosio.contracts/eosio.token; \
+		eosio-cpp -I include -o eosio.token.wasm src/eosio.token.cpp --abigen; \
+		$(cleos) set contract eosio.token $(CONTRACT_FOLDER)/eosio.contracts/eosio.token --abi eosio.token.abi -p eosio.token@active; \
+	cd -
+
+token.create:
+	$(cleos) push action eosio.token create '[ "eosio", "1000000000.0000 SYS"]' -p eosio.token@active
+	$(cleos) push action eosio.token create '{"issuer":"eosio", "maximum_supply":"1000000000.0000 SYS"}' -p eosio.token@active
+
+token.issue:
+	$(cleos) push action eosio.token issue '[ "alice", "100.0000 SYS", "memo" ]' -p eosio@active
+	$(cleos) push action eosio.token issue '["alice", "100.0000 SYS", "memo"]' -p eosio@active -d -j
+
+token.transfer:
+	$(cleos) push action eosio.token transfer '[ "alice", "bob", "25.0000 SYS", "m" ]' -p alice@active
+
+token.get:
+	$(cleos) get currency balance eosio.token bob SYS
+	$(cleos) get currency balance eosio.token alice SYS
