@@ -68,6 +68,19 @@ hello:
 	$(cleos) push action hello hi '["bob"]' -p bob@active
 	$(cleos) push action hello hi '["alice"]' -p alice@active
 
+define grant
+	@$(cleos) set account permission $(1) active \
+		'{"threshold": 1,"keys": [{"key": "$(WALLET_PUBLIC_KEY)", "weight": 1}], "accounts": [{"permission":{"actor":"$(2)","permission":"eosio.code"},"weight":1}]}' \
+		owner -p $(1)@owner
+endef
+
+caller:
+	$(call build,caller)
+	$(call build,receiver)
+
+	$(call grant,alice,caller)
+	$(cleos) push action caller hi '["bob", "alice"]' -p bob@active
+
 ab:
 	$(call build,abcounter)
 
@@ -94,17 +107,3 @@ addr.by.age:
 
 addr.list:
 	$(cleos) get actions alice
-
-define grant
-	@$(cleos) set account permission $(1) active \
-		'{"threshold": 1,"keys": [{"key": "$(WALLET_PUBLIC_KEY)", "weight": 1}], "accounts": [{"permission":{"actor":"$(2)","permission":"eosio.code"},"weight":1}]}' \
-		owner -p $(1)@owner
-endef
-
-caller:
-	$(call build,caller)
-	$(call build,receiver)
-
-call:
-	$(call grant,alice,caller)
-	$(cleos) push action caller hi '["bob", "alice"]' -p bob@active
