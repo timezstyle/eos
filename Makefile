@@ -3,8 +3,8 @@ CONTRACT_FOLDER ?= $(CURDIR)/contracts
 DEV_PRIVATE_KEY ?= 5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
 DEV_PUBLIC_KEY ?= EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 
-WALLET_PRIVATE_KEY ?= PW5K1g4iUsmtx8zmFTnPYPRdqmJVE1phM67HECRrVDmauR9UZipqo
-WALLET_PUBLIC_KEY ?= EOS7CQQUoG8SSaihBvLk4nfCXiXorHfPmmgT9n5i9yd2L81Ctma9U
+WALLET_PRIVATE_KEY ?= PW5KaNqnMu6fxMCThhK92fnKq7HuW9RW54FrZpz22YYWadV5GVc9a
+WALLET_PUBLIC_KEY ?= EOS5EugZ6wvypMxca2ehUBvxbkdwyPgKnVfGbJxReeCY7j8Fretqc
 
 clean:
 	docker rm -f eosio
@@ -68,8 +68,15 @@ hello:
 	$(cleos) push action hello hi '["bob"]' -p bob@active
 	$(cleos) push action hello hi '["alice"]' -p alice@active
 
+ab:
+	$(call build,abcounter)
+
+ab.by.count:
+	$(cleos) get table abcounter abcounter counts --lower alice --limit 2
+
 addr:
 	$(call build,addressbook)
+	$(call grant,addressbook,addressbook)
 	$(cleos) push action addressbook upsert '["bob", "bob", "is a guy", 50, "doesnt exist", "somewhere", "someplace"]' -p bob@active
 	$(cleos) push action addressbook upsert '["alice", "alice", "liddell", 9, "123 drink me way", "wonderland", "amsterdam"]' -p alice@active
 
@@ -98,8 +105,6 @@ caller:
 	$(call build,caller)
 	$(call build,receiver)
 
-	$(call grant,bob,caller)
-	$(call grant,alice,caller)
-
 call:
+	$(call grant,alice,caller)
 	$(cleos) push action caller hi '["bob", "alice"]' -p bob@active
